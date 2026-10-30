@@ -61,6 +61,26 @@ final class Product
         return $product;
     }
 
+    public function aiCatalog(): array
+    {
+        // Uma leitura limitada evita carregar descrições, preços e estoques para a IA.
+        $rows = $this->db->query('SELECT p.id, p.name, v.id AS variant_id, v.name AS variant_name
+            FROM products p LEFT JOIN product_variants v ON v.product_id = p.id
+            WHERE p.active = 1 ORDER BY p.id, v.id LIMIT 501')->fetchAll();
+        $catalog = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['id'];
+            $catalog[$id] ??= ['id' => $id, 'name' => $row['name'], 'variants' => []];
+            if ($row['variant_id'] !== null) {
+                $catalog[$id]['variants'][] = ['id' => (int) $row['variant_id'], 'name' => $row['variant_name']];
+            }
+        }
+        if (count($rows) > 500 || count($catalog) > 100) {
+            throw new \App\Services\AIException('catalog_limit', 'O catálogo ativo excede o limite de 100 produtos ou 500 linhas de produtos/variações desta versão.', 422);
+        }
+        return array_values($catalog);
+    }
+
     public function save(array $data, ?int $id = null): ?int
     {
         $this->db->beginTransaction();

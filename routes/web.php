@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controllers\DashboardController;
 use App\Controllers\PlaceholderController;
 use App\Controllers\ProductController;
+use App\Controllers\AIController;
 
 $router->get('/', [new DashboardController(), 'index']);
 $products = new ProductController();
@@ -15,4 +16,6 @@ $router->post('/produtos/criar', [$products, 'store']);
 $router->post('/produtos/atualizar', [$products, 'update']);
 $router->post('/produtos/excluir', [$products, 'delete']);
 $router->get('/pedidos', fn () => (new PlaceholderController())->show('pedidos'));
-$router->get('/assistente', fn () => (new PlaceholderController())->show('assistente'));
+$assistant = new AIController();
+$router->get('/assistente', [$assistant, 'index']);
+$router->post('/api/ai/interpret', [$assistant, 'interpret']);
