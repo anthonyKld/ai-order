@@ -1,0 +1,1 @@
+<section class="empty-state"><span class="error-code"><?= e($status) ?></span><h1><?= e($title) ?></h1><p><?= $status === 404 ? 'Este endereço não está disponível. Volte ao início para continuar.' : 'Esta página não aceita o método utilizado na requisição.' ?></p><a class="btn btn-accent" href="<?= e(url()) ?>">Voltar ao Dashboard <?= icon('arrow') ?></a></section>

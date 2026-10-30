@@ -1,0 +1,9 @@
+/vendor/
+/.env
+/.env.*
+!/.env.example
+/storage/logs/*
+!/storage/logs/.gitkeep
+/.tools/
+/node_modules/
+/.qa/
