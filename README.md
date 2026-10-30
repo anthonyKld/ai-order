@@ -1,12 +1,14 @@
 # AI Order — Assistente Inteligente de Pedidos
 
-Base de um sistema comercial que, em etapas futuras, interpretará pedidos em linguagem natural e apresentará os dados para conferência antes de salvar. Projeto de portfólio com arquitetura MVC simplificada, sem framework PHP completo.
+Desenvolvi o AI Order como um projeto de portfólio para transformar pedidos em linguagem natural em uma prévia estruturada para conferência. Utilizei PHP com uma arquitetura MVC simplificada, sem framework completo.
 
-**Esta versão implementa as Etapas 01 e 02 — Gerenciamento de Produtos.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O exemplo de pedido do dashboard continua estático e ilustrativo. Não há processamento de IA, autenticação ou persistência de pedidos.
+**Nesta versão, implementei as Etapas 01, 02 e 03 — Integração com Inteligência Artificial.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela OpenAI e valida os itens no PHP. Mantive o exemplo do dashboard estático e ilustrativo. A prévia não salva pedidos nem altera estoque; autenticação continua fora do escopo.
+
+Registrei as decisões, o fluxo, os arquivos alterados, os testes e um roteiro para minha revisão técnica em **[Etapa 03 — documentação técnica](docs/ETAPA-03.md)**.
 
 ## Tecnologias e requisitos
 
-- PHP 8.2+ com extensões `pdo` e `pdo_mysql`.
+- PHP 8.2+ de 64 bits com extensões `pdo` e `pdo_mysql`; a chamada à OpenAI também exige `curl`, HTTPS e certificados confiáveis configurados.
 - MySQL 8.0.16+ ou MariaDB 10.4+ (XAMPP), com InnoDB e `utf8mb4`. O catálogo exige o banco iniciado; o dashboard continua independente.
 - Composer 2, autoload PSR-4 e `vlucas/phpdotenv` para leitura do ambiente.
 - HTML5, CSS3, JavaScript e Bootstrap 5.3.8, com arquivos locais e licença preservada.
@@ -43,11 +45,12 @@ Em outro computador, instale o Composer pela [documentação oficial](https://ge
 | `APP_TIMEZONE` | Fuso horário; padrão `America/Manaus` |
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE` | Servidor, porta e banco MySQL |
 | `DB_USERNAME`, `DB_PASSWORD` | Credenciais locais; valores vazios no exemplo |
-| `AI_API_URL`, `AI_API_KEY`, `AI_MODEL` | Reservadas para etapa futura, sem uso nesta versão |
+| `OPENAI_API_KEY` | Chave da OpenAI, mantida exclusivamente no servidor |
+| `OPENAI_MODEL` | Modelo com suporte à Responses API e Structured Outputs; obrigatório para interpretar |
 
 Exemplos de `APP_URL`: `http://localhost/ai-order/public` no XAMPP ou `http://127.0.0.1:8000` no servidor embutido. Links usam o caminho dessa URL e permanecem no domínio atual. Ao alternar servidores, deixe a variável vazia ou ajuste o subdiretório.
 
-Não é necessária chave de API. A classe `App\Core\Database` reutiliza `config/database.php` e abre a conexão sob demanda, com `utf8mb4`, exceções PDO e prepared statements nativos.
+A chave é necessária somente para interpretar pedidos. O dashboard e o catálogo continuam funcionando sem OpenAI. Removi as variáveis reservadas `AI_API_URL`, `AI_API_KEY` e `AI_MODEL` do exemplo; se existirem no ambiente antigo, elas não são usadas. A classe `App\Core\Database` reutiliza `config/database.php` e abre a conexão sob demanda, com `utf8mb4`, exceções PDO e prepared statements nativos.
 
 ## Banco de dados — Etapa 02
 
@@ -117,18 +120,21 @@ Abra **http://127.0.0.1:8000/**. `Ctrl+C` encerra o servidor. Use o servidor emb
 ```text
 ai-order/
 ├── app/
-│   ├── Controllers/       # Dashboard, ProductController e páginas futuras
+│   ├── Controllers/       # Dashboard, produtos, assistente e páginas futuras
 │   ├── Core/              # Router, View, Database e Session (CSRF/flash)
 │   ├── Models/            # Product: consultas e transações
-│   ├── Validation/        # ProductValidator: validação do formulário
+│   ├── Services/          # OpenAI, erros e limites de requisição
+│   ├── Validation/        # Formulário, resposta estruturada e prévia
 │   ├── Views/
+│   │   ├── ai/            # Formulário e resultado assíncrono
 │   │   ├── dashboard/
 │   │   ├── errors/
 │   │   ├── layouts/
 │   │   ├── pages/
 │   │   └── products/      # Listagem e formulário compartilhado
 │   └── helpers.php        # Escape HTML, URLs, ambiente e ícones
-├── config/                # Configuração da aplicação e do banco
+├── config/                # Configuração da aplicação, banco e OpenAI
+├── docs/ETAPA-03.md        # Decisões e roteiro de revisão técnica
 ├── database/              # Migration versionada e seed opcional
 ├── public/                # Única raiz pública
 │   ├── assets/
@@ -163,7 +169,8 @@ Fluxo: requisição → `public/index.php` → bootstrap/configuração → Rout
 - Pesquisa por nome, filtro por status e paginação no servidor com 10 produtos por página.
 - Tabela responsiva, estado vazio, mensagens de sucesso e modal de confirmação de exclusão.
 - Transações para produto/variações, validação no servidor e CSRF em todas as escritas.
-- Páginas Pedidos e Assistente IA permanecem com aviso de implementação futura.
+- Assistente IA com Fetch, saída estruturada, prévia validada e total parcial quando há pendências.
+- Página Pedidos permanece com aviso de implementação futura.
 - Roteador GET/POST, query strings, subdiretórios, respostas 404 e 405 com `Allow`.
 - Escape de dados dinâmicos, CSP com recursos locais e mensagens públicas genéricas em falhas internas.
 - Configuração por ambiente e conexão PDO sob demanda.
@@ -196,23 +203,29 @@ Alternativa sem ferramentas no PATH:
 ```powershell
 C:\xampp\php\php.exe .tools\composer.phar validate --strict
 C:\xampp\php\php.exe tests\run.php
+C:\xampp\php\php.exe tests\ai.php
 ```
 
 `tests/run.php` não depende do MySQL. Verifica rotas, subdiretórios, escape HTML, formulário, validação de nome/preço/estoque/variações, limites, normalização monetária, CSRF nas três operações e confirmação obrigatória.
+
+Incluí `tests/ai.php` no `composer test`: valida o contrato JSON, o processamento da prévia, as falhas simuladas da API, a soma de itens repetidos, valores monetários e os limites de uso. Esse teste não usa rede, banco nem créditos. A simulação de quantidades por extenso verifica o processamento da resposta normalizada; a qualidade linguística do modelo precisa de teste real.
 
 Após configurar o banco, execute também:
 
 ```powershell
 C:\xampp\php\php.exe tests/products_mysql.php
+C:\xampp\php\php.exe tests/ai_mysql.php
 ```
 
 Esse teste exige permissão para criar/remover bancos. Cria um banco **aleatório e isolado** com prefixo `ai_order_test_`, aplica a migration, testa CRUD, estoque, IDs, timestamps, pesquisa, filtros, paginação, rollback e proteção de vínculos comerciais simulados; remove somente esse banco ao terminar. Não importa o seed nem altera os produtos de `DB_DATABASE`. Não há dependências de teste adicionais.
 
+O teste `ai_mysql.php` também usa um banco temporário isolado: confere catálogo ativo, limites, consulta após interpretação e ausência de alterações no banco, com a resposta da OpenAI simulada.
+
 Verificação manual:
 
 1. Abra `/` e confirme a apresentação e a marcação de exemplo ilustrativo.
-2. Navegue por Produtos, Pedidos e Assistente IA; confira o destaque do menu e os avisos de “Em breve” somente nos módulos futuros.
-3. Clique em “Conhecer o Assistente IA” e depois “Voltar ao Dashboard”.
+2. Navegue por Produtos, Pedidos e Assistente IA; confira o destaque do menu e o aviso de “Em breve” somente em Pedidos.
+3. Clique em “Conhecer o Assistente IA”, confira o formulário e volte pelo link Dashboard no menu.
 4. Abra `/pagina-inexistente`: deve retornar HTTP 404 com navegação de retorno.
 5. Envie POST para `/`: deve retornar HTTP 405, sem modificar dados.
 6. Em uma janela de 390 px, abra/feche o menu, navegue e confira ausência de rolagem horizontal. Teste também teclado, Tab e Escape.
@@ -231,7 +244,63 @@ Verificação manual da Etapa 02:
 9. Digite `<script>alert(1)</script>` no nome/descrição: o conteúdo deve aparecer como texto e não executar.
 10. Confira formulário, listagem e modal em 320/390 px e desktop. A tabela pode rolar horizontalmente dentro do painel; a página não deve transbordar. Teste menu, teclado, foco e Escape.
 
-Verificado nesta entrega em PHP 8.2.12 e MariaDB 10.4.32 do XAMPP, com testes PHP e navegação automatizada em Microsoft Edge. MySQL 8 não foi executado neste ambiente.
+Validei a Etapa 03 com PHP 8.2.12, MariaDB 10.4.32 do XAMPP e Microsoft Edge. Resultados: 73 verificações gerais, 77 de IA sem rede, 19 de produtos/MySQL, 10 de IA/MySQL e 23 verificações HTTP/interface por execução do teste de navegador. Não executei MySQL 8 nem uma chamada real à OpenAI nesta entrega. Detalhei os limites dessa validação em [docs/ETAPA-03.md](docs/ETAPA-03.md).
+
+## Assistente IA — Etapa 03
+
+### Configuração e uso
+
+Mantive a URL da API fixa no back-end (`https://api.openai.com/v1/responses`). No `.env` local, adicione:
+
+```dotenv
+OPENAI_API_KEY=sua_chave_local
+OPENAI_MODEL=gpt-4o-mini
+```
+
+O modelo acima é um exemplo compatível com Structured Outputs; a escolha é configurável e depende do acesso da conta. Não envie a chave para o Git nem para o JavaScript. No XAMPP, confira `extension=curl` no `php.ini` e reinicie o Apache se alterar extensões. Em caso de falha de certificado, configure uma cadeia de certificados confiável para o PHP; não desative a verificação TLS.
+
+Com MySQL iniciado e produtos ativos cadastrados, abra **Assistente IA** (`/assistente`), escreva o pedido e clique em **Interpretar pedido**. Recebo o resultado sem recarregar a página.
+
+### Fluxo que implementei
+
+1. O navegador envia `{ "message": "Quero 3 camisetas pretas M" }` para `POST /api/ai/interpret`, com o token CSRF da sessão no cabeçalho `X-CSRF-Token`.
+2. O PHP valida JSON, tamanho e limites por sessão; consulta somente os IDs, nomes e variações dos produtos ativos.
+3. O `AIService` envia contexto e mensagem para a Responses API com JSON Schema estrito. Sem catálogo, interrompo antes da chamada externa.
+4. Valido o formato da resposta no PHP e consulto novamente cada produto sugerido. Confiro atividade, correspondência de nomes, vínculo da variação e quantidade.
+5. Somo quantidades repetidas, comparo com o estoque e calculo os valores com preços do banco, em centavos inteiros.
+6. Exibo os itens, todas as pendências, observações, prazo literal e total estimado apenas dos itens sem pendências.
+
+Escolhi `text.format` com `json_schema` e `strict: true` conforme a [documentação oficial de Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses). Valido o conteúdo no PHP porque o formato estruturado não garante que a interpretação corresponda ao pedido ou ao cadastro.
+
+### Exemplos para testar
+
+**Adaptação pendente para Gemini:** a integração atual ainda usa OpenAI. Os testes automáticos simulam a IA e não exigem créditos. Consulte [o plano de testes com Gemini](docs/TESTES-GEMINI.md) para os pontos de alteração, a separação entre testes simulados e reais e os critérios de validação. Trocar apenas a chave no `.env` não habilita Gemini.
+
+Os exemplos abaixo dependem dos respectivos produtos e variações no catálogo. O seed opcional da Etapa 02 contém Camiseta Básica e Caneca Personalizada.
+
+| Mensagem | Resultado que espero conferir |
+| --- | --- |
+| `Quero duas camisetas pretas M.` | Quantidade 2 e variação Preta / M |
+| `Quero 3 camisetas pretas M e 2 camisetas brancas G para sexta-feira.` | Dois itens e prazo literal |
+| `Preciso de 5 canecas.` | Produto simples, quantidade 5 |
+| `Quero umas camisetas.` | Quantidade e variação pendentes |
+| `Quero 3 camisetas azuis.` | Variação não encontrada quando não cadastrada |
+| `Quero 10 camisetas pretas M e mais 10 camisetas pretas M.` | Soma 20; insuficiência se o estoque for 15 |
+| `Quero 1 produto inexistente.` | Produto não encontrado, sem preço inventado |
+
+### Limites e custos
+
+Adotei 2.000 caracteres por mensagem, corpo HTTP de até 16.000 bytes, cinco tentativas válidas por minuto por sessão e bloqueio da mesma mensagem por 15 segundos. Catálogo: até 100 produtos e 500 linhas na consulta com variações, com contexto serializado de até 64.000 bytes. Rejeito o excesso sem enviar um catálogo incompleto. A resposta aceita até 50 itens e quantidade de 1 a 10.000 por item.
+
+Limitei a saída a 4.000 tokens, a conexão a 5 segundos e a requisição a 30 segundos. Não implementei repetição automática. Configuração inválida, limite do provedor ou respostas incompletas podem impedir a prévia; falhas locais após o limite por sessão também consomem uma tentativa dessa janela.
+
+Cada chamada real pode consumir créditos. Os limites locais reduzem o uso acidental, mas não representam um teto financeiro global. Antes de testar, confiro o consumo e os limites da conta OpenAI. O texto digitado e o catálogo mínimo são enviados ao provedor; não registro mensagens completas ou respostas brutas em logs e envio `store: false` na requisição, sem tratar isso como garantia de retenção zero pelo provedor.
+
+**Como ainda não implementei autenticação, este endpoint não deve ser exposto publicamente sem controles adicionais de acesso e consumo.** Uma nova sessão contorna o limite local; CSRF não substitui autenticação nem proteção global contra abuso.
+
+O reconhecimento pode falhar com apelidos, abreviações, erros de digitação e descrições ambíguas. Minha conferência de nomes é conservadora: normaliza caixa, alguns acentos, plurais simples e cores comuns, mas não é uma busca semântica. A IA ainda pode extrair informações incorretamente. Preservo o prazo como texto, sem prometer uma data de entrega.
+
+**A prévia precisa de conferência humana.** Não implementei criação ou gravação de pedidos, baixa de estoque nem confirmação nesta etapa. O estoque pode mudar depois da consulta; em uma etapa futura, será necessário revalidá-lo no momento de salvar, dentro da regra transacional adequada.
 
 ## Limitações e próximas etapas
 
@@ -242,9 +311,9 @@ Verificado nesta entrega em PHP 8.2.12 e MariaDB 10.4.32 do XAMPP, com testes PH
 - JavaScript é necessário para adicionar/remover linhas e abrir a confirmação; a segurança e a validação são feitas no servidor. Cookies de sessão devem estar habilitados.
 - Pesquisa por trecho usa `LIKE` e não full-text; adequada ao MVP. Edições simultâneas usam transações e lock do produto, mas a última gravação válida prevalece.
 - IDs de variações existentes são preservados. A exclusão física ocorre em transação: futuras tabelas de pedidos devem usar FKs com `ON DELETE RESTRICT` para produtos e variações. A aplicação já trata o bloqueio com uma mensagem amigável e rollback completo; não há tabelas de pedidos nesta etapa.
-- Sem clientes, pedidos, financeiro, uploads, relatórios, APIs externas ou integração com IA. O dashboard não mostra métricas reais.
+- Sem clientes, pedidos, financeiro, uploads ou relatórios. A integração externa desta versão se limita à OpenAI; o dashboard não mostra métricas reais.
 - Erros internos retornam mensagem genérica. Logs ficam em `storage/logs/php.log`; erros da aplicação não registram credenciais nem mensagens brutas de conexão.
-- Próximas etapas, somente mediante solicitação: **03** integração IA; **04** validação/confirmação; **05** persistência e gestão de pedidos; **06** finalização do portfólio.
+- Próximas etapas, somente mediante solicitação: **04** fluxo de validação/confirmação; **05** persistência e gestão de pedidos; **06** finalização do portfólio. A validação técnica da prévia já faz parte da Etapa 03.
 
 ## Arquivos da Etapa 02
 
