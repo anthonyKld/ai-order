@@ -18,7 +18,7 @@
     ]
   },
   "scripts": {
-    "test": "@php tests/run.php",
+    "test": ["@php tests/run.php", "@php tests/ai.php"],
     "start": "@php -S 127.0.0.1:8000 -t public server.php"
   },
   "config": {
