@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="<?= e(url('assets/css/app.css')) ?>">
     <script src="<?= e(url('assets/vendor/bootstrap/bootstrap.bundle.min.js')) ?>" defer></script>
     <script src="<?= e(url('assets/js/app.js')) ?>" defer></script>
+    <?php if ($active === 'produtos'): ?><script src="<?= e(url('assets/js/products.js')) ?>" defer></script><?php endif; ?>
 </head>
 <body>
 <a class="skip-link" href="#main">Pular para o conteúdo</a>
@@ -34,7 +35,7 @@
             <span class="small-icon"><?= icon('code') ?></span>
             <strong>Uma ideia em construção</strong>
             <p>Inteligência artificial e gestão comercial, conectadas.</p>
-            <span class="version-tag">MVP · Etapa 01</span>
+            <span class="version-tag">MVP · Etapa 02</span>
         </div>
         <div class="sidebar-footer"><span class="status-dot"></span> Ambiente de desenvolvimento</div>
     </div>
@@ -48,7 +49,7 @@
         <div class="header-identity"><span class="header-caption">Assistente Inteligente de Pedidos</span><span class="avatar" aria-hidden="true">AO</span></div>
     </header>
     <main id="main" class="main-content" tabindex="-1"><?= $content ?></main>
-    <footer class="page-footer"><span><?= e(View::config('name')) ?> <span class="footer-dot">·</span> Menos tarefas. Mais possibilidades.</span><span>Versão 0.1.0 <span class="footer-dot">/</span> Estrutura inicial</span></footer>
+    <footer class="page-footer"><span><?= e(View::config('name')) ?> <span class="footer-dot">·</span> Menos tarefas. Mais possibilidades.</span><span>Versão 0.2.0 <span class="footer-dot">/</span> Gerenciamento de produtos</span></footer>
 </div>
 </body>
 </html>
