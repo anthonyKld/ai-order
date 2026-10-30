@@ -17,6 +17,12 @@ function url(string $path = ''): string
     return rtrim(App\Core\View::config('base_path'), '/') . '/' . ltrim($path, '/');
 }
 
+function money(string $value): string
+{
+    [$whole, $cents] = array_pad(explode('.', $value, 2), 2, '00');
+    return 'R$ ' . preg_replace('/\B(?=(\d{3})+(?!\d))/', '.', $whole) . ',' . str_pad($cents, 2, '0');
+}
+
 function icon(string $name, string $class = ''): string
 {
     $paths = [
