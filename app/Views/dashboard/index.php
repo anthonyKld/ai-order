@@ -1,6 +1,6 @@
 <div class="page-heading">
     <div><div class="eyebrow">VISÃO GERAL</div><h1>Seu próximo pedido começa aqui<span class="text-accent">.</span></h1><p>Bem-vindo ao AI Order. Estamos preparando um jeito mais simples de gerenciar pedidos.</p></div>
-    <span class="stage-pill"><span class="status-dot"></span> Etapa 01 · Estrutura inicial</span>
+    <span class="stage-pill"><span class="status-dot"></span> Etapa 02 · Produtos</span>
 </div>
 
 <section class="welcome-panel" aria-labelledby="welcome-title">
@@ -25,20 +25,20 @@
 </section>
 
 <section class="features-section" aria-labelledby="features-title">
-    <div class="section-heading"><div><h2 id="features-title">Tudo conectado, do início ao fim</h2><p>Conheça os módulos que vão fazer parte do seu dia a dia.</p></div><span class="quiet-label">O QUE VEM POR AÍ</span></div>
+    <div class="section-heading"><div><h2 id="features-title">Tudo conectado, do início ao fim</h2><p>Conheça os módulos que vão fazer parte do seu dia a dia.</p></div><span class="quiet-label">MÓDULOS DO SISTEMA</span></div>
     <div class="row g-3">
         <?php foreach ([['box', 'produtos', 'Catálogo de produtos', 'Organize produtos, preços, estoque e variações em um único lugar.', 'Etapa 02'], ['spark', 'assistente', 'Assistente com IA', 'Escreva seu pedido naturalmente e receba os dados prontos para conferir.', 'Etapa 03'], ['orders', 'pedidos', 'Gestão de pedidos', 'Acompanhe os detalhes e o status de cada pedido com clareza.', 'Etapa 05']] as [$symbol, $path, $name, $description, $step]): ?>
-        <div class="col-md-4"><a class="feature-card" href="<?= e(url($path)) ?>"><div class="feature-top"><span class="feature-icon <?= $symbol === 'spark' ? 'purple' : '' ?>"><?= icon($symbol) ?></span><span class="coming-badge">Em breve</span></div><h3><?= e($name) ?></h3><p><?= e($description) ?></p><div class="feature-bottom"><span><?= e($step) ?></span><?= icon('arrow') ?></div></a></div>
+        <div class="col-md-4"><a class="feature-card" href="<?= e(url($path)) ?>"><div class="feature-top"><span class="feature-icon <?= $symbol === 'spark' ? 'purple' : '' ?>"><?= icon($symbol) ?></span><span class="coming-badge"><?= $path === 'produtos' ? 'Disponível' : 'Em breve' ?></span></div><h3><?= e($name) ?></h3><p><?= e($description) ?></p><div class="feature-bottom"><span><?= e($step) ?></span><?= icon('arrow') ?></div></a></div>
         <?php endforeach; ?>
     </div>
 </section>
 
 <section class="development-panel" aria-labelledby="development-title">
-    <div class="development-intro"><span class="feature-icon small"><?= icon('code') ?></span><div><h2 id="development-title">Construindo a base</h2><p>Uma etapa de cada vez, com propósito.</p></div><span class="current-badge">ETAPA ATUAL</span></div>
-    <div class="development-details"><div><strong>Estrutura inicial do sistema</strong><p>Navegação, interface e arquitetura prontas para evoluir.</p></div><span class="foundation-tag"><?= icon('check') ?> Você está aqui</span></div>
+    <div class="development-intro"><span class="feature-icon small"><?= icon('code') ?></span><div><h2 id="development-title">Organizando o catálogo</h2><p>Uma etapa de cada vez, com propósito.</p></div><span class="current-badge">ETAPA ATUAL</span></div>
+    <div class="development-details"><div><strong>Gerenciamento de produtos</strong><p>Cadastro, preços, estoque e variações disponíveis.</p></div><span class="foundation-tag"><?= icon('check') ?> Você está aqui</span></div>
     <div class="roadmap" aria-label="Etapas do projeto">
         <?php foreach (['Estrutura', 'Produtos', 'Integração IA', 'Validação', 'Pedidos', 'Portfólio'] as $index => $step): ?>
-        <div class="roadmap-step <?= $index === 0 ? 'current' : '' ?>"><span class="step-node"><?= $index === 0 ? icon('check') : e(str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT)) ?></span><span><?= e($step) ?></span></div>
+        <div class="roadmap-step <?= $index === 1 ? 'current' : '' ?>"><span class="step-node"><?= $index === 0 ? icon('check') : e(str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT)) ?></span><span><?= e($step) ?></span></div>
         <?php endforeach; ?>
     </div>
 </section>
