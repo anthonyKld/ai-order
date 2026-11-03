@@ -1,6 +1,6 @@
 # Etapa 03 — Integração com Inteligência Artificial
 
-> Atualização de 30/10/2026: os resultados abaixo descrevem a entrega original. Uma verificação posterior da OpenAI encontrou falta de créditos, e o uso do Gemini para testes reais ficou pendente. Consulte [Testes da IA com Gemini](TESTES-GEMINI.md) para o diagnóstico atualizado, os pontos marcados no código e a abordagem de testes a implementar. Gemini ainda não está integrado.
+> Atualização de 31/10/2026: este documento preserva o histórico da entrega original com OpenAI. A implementação atual usa Google Gemini, com configuração, protocolo e testes próprios. Consulte [Testes da IA com Gemini](TESTES-GEMINI.md) para o estado atual e o teste real optativo.
 
 ## O que desenvolvi
 

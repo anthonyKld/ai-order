@@ -1,6 +1,4 @@
 <?php use App\Core\Session;
-// TODO(Gemini): atualizar o aviso de envio de dados abaixo quando o provedor for integrado.
-// Não anunciar Gemini enquanto a aplicação ainda enviar as mensagens para a OpenAI.
 ?>
 <div class="page-heading">
     <div><div class="eyebrow">DO TEXTO À PRÉVIA</div><h1>Assistente Inteligente<span class="text-accent">.</span></h1><p>Descreva seu pedido naturalmente. A inteligência artificial identificará os produtos, quantidades e variações disponíveis no catálogo.</p></div>
@@ -19,7 +17,7 @@
         </div>
     </form>
     <noscript><p class="alert alert-warning mt-3">Ative o JavaScript para interpretar o pedido e visualizar a prévia.</p></noscript>
-    <p class="small text-secondary mt-3 mb-0">Seu texto e os nomes dos produtos e variações ativos serão enviados à OpenAI para interpretação. Evite incluir dados pessoais.</p>
+    <p class="small text-secondary mt-3 mb-0">Seu texto e os nomes dos produtos e variações ativos serão enviados ao Google Gemini para interpretação. Evite incluir dados pessoais.</p>
 </section>
 
 <div id="ai-error" class="alert alert-danger" role="alert" hidden></div>

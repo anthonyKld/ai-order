@@ -2,13 +2,13 @@
 
 Desenvolvi o AI Order como um projeto de portfólio para transformar pedidos em linguagem natural em uma prévia estruturada para conferência. Utilizei PHP com uma arquitetura MVC simplificada, sem framework completo.
 
-**Nesta versão, implementei as Etapas 01, 02 e 03 — Integração com Inteligência Artificial.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela OpenAI e valida os itens no PHP. Mantive o exemplo do dashboard estático e ilustrativo. A prévia não salva pedidos nem altera estoque; autenticação continua fora do escopo.
+**Nesta versão, implementei as Etapas 01, 02 e 03 — Integração com Inteligência Artificial.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela Google Gemini e valida os itens no PHP. Mantive o exemplo do dashboard estático e ilustrativo. A prévia não salva pedidos nem altera estoque; autenticação continua fora do escopo.
 
 Registrei as decisões, o fluxo, os arquivos alterados, os testes e um roteiro para minha revisão técnica em **[Etapa 03 — documentação técnica](docs/ETAPA-03.md)**.
 
 ## Tecnologias e requisitos
 
-- PHP 8.2+ de 64 bits com extensões `pdo` e `pdo_mysql`; a chamada à OpenAI também exige `curl`, HTTPS e certificados confiáveis configurados.
+- PHP 8.2+ de 64 bits com extensões `pdo` e `pdo_mysql`; a chamada à Google Gemini também exige `curl`, HTTPS e certificados confiáveis configurados.
 - MySQL 8.0.16+ ou MariaDB 10.4+ (XAMPP), com InnoDB e `utf8mb4`. O catálogo exige o banco iniciado; o dashboard continua independente.
 - Composer 2, autoload PSR-4 e `vlucas/phpdotenv` para leitura do ambiente.
 - HTML5, CSS3, JavaScript e Bootstrap 5.3.8, com arquivos locais e licença preservada.
@@ -45,12 +45,12 @@ Em outro computador, instale o Composer pela [documentação oficial](https://ge
 | `APP_TIMEZONE` | Fuso horário; padrão `America/Manaus` |
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE` | Servidor, porta e banco MySQL |
 | `DB_USERNAME`, `DB_PASSWORD` | Credenciais locais; valores vazios no exemplo |
-| `OPENAI_API_KEY` | Chave da OpenAI, mantida exclusivamente no servidor |
-| `OPENAI_MODEL` | Modelo com suporte à Responses API e Structured Outputs; obrigatório para interpretar |
+| `GEMINI_API_KEY` | Chave da Google Gemini, mantida exclusivamente no servidor |
+| `GEMINI_MODEL` | Modelo com suporte à generateContent e saída JSON estruturada; obrigatório para interpretar |
 
 Exemplos de `APP_URL`: `http://localhost/ai-order/public` no XAMPP ou `http://127.0.0.1:8000` no servidor embutido. Links usam o caminho dessa URL e permanecem no domínio atual. Ao alternar servidores, deixe a variável vazia ou ajuste o subdiretório.
 
-A chave é necessária somente para interpretar pedidos. O dashboard e o catálogo continuam funcionando sem OpenAI. Removi as variáveis reservadas `AI_API_URL`, `AI_API_KEY` e `AI_MODEL` do exemplo; se existirem no ambiente antigo, elas não são usadas. A classe `App\Core\Database` reutiliza `config/database.php` e abre a conexão sob demanda, com `utf8mb4`, exceções PDO e prepared statements nativos.
+A chave é necessária somente para interpretar pedidos. O dashboard e o catálogo continuam funcionando sem Google Gemini. Removi as variáveis reservadas `AI_API_URL`, `AI_API_KEY` e `AI_MODEL` do exemplo; se existirem no ambiente antigo, elas não são usadas. A classe `App\Core\Database` reutiliza `config/database.php` e abre a conexão sob demanda, com `utf8mb4`, exceções PDO e prepared statements nativos.
 
 ## Banco de dados — Etapa 02
 
@@ -123,7 +123,7 @@ ai-order/
 │   ├── Controllers/       # Dashboard, produtos, assistente e páginas futuras
 │   ├── Core/              # Router, View, Database e Session (CSRF/flash)
 │   ├── Models/            # Product: consultas e transações
-│   ├── Services/          # OpenAI, erros e limites de requisição
+│   ├── Services/          # Google Gemini, erros e limites de requisição
 │   ├── Validation/        # Formulário, resposta estruturada e prévia
 │   ├── Views/
 │   │   ├── ai/            # Formulário e resultado assíncrono
@@ -133,7 +133,7 @@ ai-order/
 │   │   ├── pages/
 │   │   └── products/      # Listagem e formulário compartilhado
 │   └── helpers.php        # Escape HTML, URLs, ambiente e ícones
-├── config/                # Configuração da aplicação, banco e OpenAI
+├── config/                # Configuração da aplicação, banco e Google Gemini
 ├── docs/ETAPA-03.md        # Decisões e roteiro de revisão técnica
 ├── database/              # Migration versionada e seed opcional
 ├── public/                # Única raiz pública
@@ -219,7 +219,7 @@ C:\xampp\php\php.exe tests/ai_mysql.php
 
 Esse teste exige permissão para criar/remover bancos. Cria um banco **aleatório e isolado** com prefixo `ai_order_test_`, aplica a migration, testa CRUD, estoque, IDs, timestamps, pesquisa, filtros, paginação, rollback e proteção de vínculos comerciais simulados; remove somente esse banco ao terminar. Não importa o seed nem altera os produtos de `DB_DATABASE`. Não há dependências de teste adicionais.
 
-O teste `ai_mysql.php` também usa um banco temporário isolado: confere catálogo ativo, limites, consulta após interpretação e ausência de alterações no banco, com a resposta da OpenAI simulada.
+O teste `ai_mysql.php` também usa um banco temporário isolado: confere catálogo ativo, limites, consulta após interpretação e ausência de alterações no banco, com a resposta da Google Gemini simulada.
 
 Verificação manual:
 
@@ -244,17 +244,17 @@ Verificação manual da Etapa 02:
 9. Digite `<script>alert(1)</script>` no nome/descrição: o conteúdo deve aparecer como texto e não executar.
 10. Confira formulário, listagem e modal em 320/390 px e desktop. A tabela pode rolar horizontalmente dentro do painel; a página não deve transbordar. Teste menu, teclado, foco e Escape.
 
-Validei a Etapa 03 com PHP 8.2.12, MariaDB 10.4.32 do XAMPP e Microsoft Edge. Resultados: 73 verificações gerais, 77 de IA sem rede, 19 de produtos/MySQL, 10 de IA/MySQL e 23 verificações HTTP/interface por execução do teste de navegador. Não executei MySQL 8 nem uma chamada real à OpenAI nesta entrega. Detalhei os limites dessa validação em [docs/ETAPA-03.md](docs/ETAPA-03.md).
+Validei a integração Gemini com PHP 8.2.12, MariaDB 10.4.32 do XAMPP e Microsoft Edge: 73 verificações gerais, 105 de IA sem rede, 10 de IA/MySQL e 23 de HTTP/interface, totalizando 211 verificações aprovadas. O teste real final passou pelo navegador, Apache, MySQL e Gemini 3.5 Flash-Lite: o pedido de 3 camisetas básicas M gerou a prévia sem pendências e total local de R$ 119,70 em cerca de 2 segundos. O Gemini 3.8 Flash retornava erros 503 intermitentes e timeout. Consulte [o diagnóstico Gemini](docs/TESTES-GEMINI.md). A entrega original da Etapa 03 e seus resultados históricos estão em [docs/ETAPA-03.md](docs/ETAPA-03.md).
 
 ## Assistente IA — Etapa 03
 
 ### Configuração e uso
 
-Mantive a URL da API fixa no back-end (`https://api.openai.com/v1/responses`). No `.env` local, adicione:
+Mantive a URL da API fixa no back-end (`https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent`). No `.env` local, adicione:
 
 ```dotenv
-OPENAI_API_KEY=sua_chave_local
-OPENAI_MODEL=gpt-4o-mini
+GEMINI_API_KEY=sua_chave_local
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
 O modelo acima é um exemplo compatível com Structured Outputs; a escolha é configurável e depende do acesso da conta. Não envie a chave para o Git nem para o JavaScript. No XAMPP, confira `extension=curl` no `php.ini` e reinicie o Apache se alterar extensões. Em caso de falha de certificado, configure uma cadeia de certificados confiável para o PHP; não desative a verificação TLS.
@@ -265,16 +265,16 @@ Com MySQL iniciado e produtos ativos cadastrados, abra **Assistente IA** (`/assi
 
 1. O navegador envia `{ "message": "Quero 3 camisetas pretas M" }` para `POST /api/ai/interpret`, com o token CSRF da sessão no cabeçalho `X-CSRF-Token`.
 2. O PHP valida JSON, tamanho e limites por sessão; consulta somente os IDs, nomes e variações dos produtos ativos.
-3. O `AIService` envia contexto e mensagem para a Responses API com JSON Schema estrito. Sem catálogo, interrompo antes da chamada externa.
+3. O `AIService` envia contexto e mensagem para a API Gemini generateContent com JSON Schema. Sem catálogo, interrompo antes da chamada externa.
 4. Valido o formato da resposta no PHP e consulto novamente cada produto sugerido. Confiro atividade, correspondência de nomes, vínculo da variação e quantidade.
 5. Somo quantidades repetidas, comparo com o estoque e calculo os valores com preços do banco, em centavos inteiros.
 6. Exibo os itens, todas as pendências, observações, prazo literal e total estimado apenas dos itens sem pendências.
 
-Escolhi `text.format` com `json_schema` e `strict: true` conforme a [documentação oficial de Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses). Valido o conteúdo no PHP porque o formato estruturado não garante que a interpretação corresponda ao pedido ou ao cadastro.
+A chamada usa `systemInstruction`, `contents` e `generationConfig` com `responseMimeType: application/json` e `responseJsonSchema`, conforme a [referência oficial do Gemini](https://ai.google.dev/api/generate-content). O conteúdo continua sendo validado no PHP e conferido com o catálogo local.
 
 ### Exemplos para testar
 
-**Adaptação pendente para Gemini:** a integração atual ainda usa OpenAI. Os testes automáticos simulam a IA e não exigem créditos. Consulte [o plano de testes com Gemini](docs/TESTES-GEMINI.md) para os pontos de alteração, a separação entre testes simulados e reais e os critérios de validação. Trocar apenas a chave no `.env` não habilita Gemini.
+**Gemini integrado:** consulte [os testes e o diagnóstico](docs/TESTES-GEMINI.md). Para uma chamada real optativa com dados fictícios, execute `C:\xampp\php\php.exe tests/gemini_live.php`. A rotina padrão de testes não usa a API. As antigas variáveis `OPENAI_API_KEY` e `OPENAI_MODEL` não são mais utilizadas.
 
 Os exemplos abaixo dependem dos respectivos produtos e variações no catálogo. O seed opcional da Etapa 02 contém Camiseta Básica e Caneca Personalizada.
 
@@ -292,9 +292,9 @@ Os exemplos abaixo dependem dos respectivos produtos e variações no catálogo.
 
 Adotei 2.000 caracteres por mensagem, corpo HTTP de até 16.000 bytes, cinco tentativas válidas por minuto por sessão e bloqueio da mesma mensagem por 15 segundos. Catálogo: até 100 produtos e 500 linhas na consulta com variações, com contexto serializado de até 64.000 bytes. Rejeito o excesso sem enviar um catálogo incompleto. A resposta aceita até 50 itens e quantidade de 1 a 10.000 por item.
 
-Limitei a saída a 4.000 tokens, a conexão a 5 segundos e a requisição a 30 segundos. Não implementei repetição automática. Configuração inválida, limite do provedor ou respostas incompletas podem impedir a prévia; falhas locais após o limite por sessão também consomem uma tentativa dessa janela.
+Limitei a saída a 4.000 tokens, a conexão a 5 segundos e a requisição a 60 segundos (75 segundos no navegador). Para HTTP 500, 502, 503 ou 504, faço no máximo uma nova tentativa após uma pausa curta, dentro dos mesmos 60 segundos totais. Não repito automaticamente erros de cota, configuração ou timeout. Cada nova tentativa pode consumir quota do provedor. Configuração inválida, limite do provedor ou respostas incompletas podem impedir a prévia; falhas locais após o limite por sessão também consomem uma tentativa dessa janela.
 
-Cada chamada real pode consumir créditos. Os limites locais reduzem o uso acidental, mas não representam um teto financeiro global. Antes de testar, confiro o consumo e os limites da conta OpenAI. O texto digitado e o catálogo mínimo são enviados ao provedor; não registro mensagens completas ou respostas brutas em logs e envio `store: false` na requisição, sem tratar isso como garantia de retenção zero pelo provedor.
+Cada chamada real pode consumir créditos. Os limites locais reduzem o uso acidental, mas não representam um teto financeiro global. Antes de testar, confiro o consumo e os limites da conta Google Gemini. O texto digitado e o catálogo mínimo são enviados ao provedor; não registro mensagens completas ou respostas brutas em logs. O tratamento de dados pelo Google depende das condições aplicáveis ao projeto.
 
 **Como ainda não implementei autenticação, este endpoint não deve ser exposto publicamente sem controles adicionais de acesso e consumo.** Uma nova sessão contorna o limite local; CSRF não substitui autenticação nem proteção global contra abuso.
 
@@ -311,7 +311,7 @@ O reconhecimento pode falhar com apelidos, abreviações, erros de digitação e
 - JavaScript é necessário para adicionar/remover linhas e abrir a confirmação; a segurança e a validação são feitas no servidor. Cookies de sessão devem estar habilitados.
 - Pesquisa por trecho usa `LIKE` e não full-text; adequada ao MVP. Edições simultâneas usam transações e lock do produto, mas a última gravação válida prevalece.
 - IDs de variações existentes são preservados. A exclusão física ocorre em transação: futuras tabelas de pedidos devem usar FKs com `ON DELETE RESTRICT` para produtos e variações. A aplicação já trata o bloqueio com uma mensagem amigável e rollback completo; não há tabelas de pedidos nesta etapa.
-- Sem clientes, pedidos, financeiro, uploads ou relatórios. A integração externa desta versão se limita à OpenAI; o dashboard não mostra métricas reais.
+- Sem clientes, pedidos, financeiro, uploads ou relatórios. A integração externa desta versão se limita à Google Gemini; o dashboard não mostra métricas reais.
 - Erros internos retornam mensagem genérica. Logs ficam em `storage/logs/php.log`; erros da aplicação não registram credenciais nem mensagens brutas de conexão.
 - Próximas etapas, somente mediante solicitação: **04** fluxo de validação/confirmação; **05** persistência e gestão de pedidos; **06** finalização do portfólio. A validação técnica da prévia já faz parte da Etapa 03.
 

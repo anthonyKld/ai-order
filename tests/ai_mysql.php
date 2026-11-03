@@ -34,12 +34,11 @@ try {
         'color'=>'preta','size'=>'M','characteristics'=>null,'issues'=>[]];
     $snapshot = $db->query('SELECT * FROM products ORDER BY id')->fetchAll();
     $variantSnapshot = $db->query('SELECT * FROM product_variants ORDER BY id')->fetchAll();
-    // TODO(Gemini): adaptar este envelope simulado ao selecionar o novo provedor.
-    // Manter MySQL isolado e conferir preços/estoque sem chamar uma API real.
+    // Envelope Gemini simulado; MySQL isolado, sem chamada externa.
     $service = new AIService(['key'=>'fake','model'=>'fake'], static fn ($payload) => ['status'=>200,'body'=>json_encode([
-        'status'=>'completed','output'=>[['type'=>'message','content'=>[['type'=>'output_text','text'=>json_encode([
+        'candidates'=>[['finishReason'=>'STOP','content'=>['parts'=>[['text'=>json_encode([
             'items'=>[$item], 'notes'=>null, 'requested_deadline'=>'sexta-feira',
-        ])]]]],
+        ])]]]]],
     ])]);
     $decoded = $service->interpret('Quero três camisetas pretas M para sexta-feira.', $catalog);
     $validator = new OrderPreviewValidator();

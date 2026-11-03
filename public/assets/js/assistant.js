@@ -68,7 +68,7 @@
     error.hidden = true;
     result.hidden = true;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), 75000);
     try {
       const response = await fetch(form.action, {
         method: 'POST', credentials: 'same-origin', signal: controller.signal,

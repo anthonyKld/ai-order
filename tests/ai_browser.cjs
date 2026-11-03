@@ -1,5 +1,5 @@
 // Opcional: usa Playwright já instalado no ambiente de QA, sem dependência na aplicação.
-// TODO(Gemini): manter a simulação do contrato HTTP da aplicação; ela não valida o provedor.
+// Simulação do contrato HTTP da aplicação; não valida o provedor.
 // O teste real do Gemini deve ser separado e explícito; ver docs/TESTES-GEMINI.md.
 const path = require('node:path');
 const { chromium } = require(require.resolve('playwright', { paths: [process.cwd(), path.join(__dirname, '../.qa')] }));
@@ -74,6 +74,6 @@ const assert = require('node:assert/strict');
     await page.locator('#ai-error').waitFor({ state: 'visible' });
     check(/indisponível/.test(await page.locator('#ai-error').innerText()) && await page.locator('#ai-submit').isEnabled(), 'Erro permite nova tentativa manual.');
     check(errors.length === 0, 'Sem erros JavaScript.');
-    console.log(`OK: ${checks} verificações HTTP/interface; respostas de sucesso simuladas, nenhuma chamada à OpenAI.`);
+    console.log(`OK: ${checks} verificações HTTP/interface; respostas de sucesso simuladas, nenhuma chamada ao Gemini.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });
