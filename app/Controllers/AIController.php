@@ -43,6 +43,7 @@ final class AIController
             }
             $message = AIRequestGuard::message($input instanceof \stdClass ? ($input->message ?? null) : null);
             AIRequestGuard::consume($_SESSION, $message, time());
+            $revision = \App\Services\OrderPreviewSession::invalidate($_SESSION);
             // Mantém o lock da sessão durante a chamada para serializar envios concorrentes.
             $model = new Product((new Database(require dirname(__DIR__, 2) . '/config/database.php'))->connection());
             $catalog = $model->aiCatalog();
@@ -51,7 +52,7 @@ final class AIController
             }
             $interpretation = (new AIService(require dirname(__DIR__, 2) . '/config/ai.php'))->interpret($message, $catalog);
             $result = (new OrderPreviewValidator())->validate($interpretation, $catalog, $model->find(...));
-            $this->respond($result, 200);
+            $this->respond([...$result, 'revision' => $revision], 200);
         } catch (AIException $exception) {
             if ($exception->httpStatus === 429) header('Retry-After: 60');
             $this->error($exception->errorCode, $exception->getMessage(), $exception->httpStatus);
@@ -64,7 +65,8 @@ final class AIController
     private function error(string $code, string $message, int $status): void
     {
         $this->respond(['success' => false, 'error' => ['code' => $code, 'message' => $message],
-            'items' => [], 'warnings' => [], 'notes' => null, 'requested_deadline' => null, 'estimated_total' => null], $status);
+            'items' => [], 'warnings' => [], 'notes' => null, 'requested_deadline' => null, 'estimated_total' => null,
+            'revision' => \App\Services\OrderPreviewSession::revision($_SESSION ?? [])], $status);
     }
 
     private function respond(array $data, int $status): void

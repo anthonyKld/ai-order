@@ -1174,3 +1174,8 @@ h1 {
     transform: none;
   }
 }
+/* Conferência de pedidos: rolagem restrita à tabela em telas pequenas. */
+.review-quantity { min-width: 5.5rem; }
+#ai-items .form-select { min-width: 9rem; }
+#ai-items td:first-child { min-width: 11rem; }
+#ai-items [data-status] { min-width: 12rem; }

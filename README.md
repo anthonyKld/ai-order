@@ -2,9 +2,11 @@
 
 Desenvolvi o AI Order como um projeto de portfólio para transformar pedidos em linguagem natural em uma prévia estruturada para conferência. Utilizei PHP com uma arquitetura MVC simplificada, sem framework completo.
 
-**Nesta versão, implementei as Etapas 01, 02 e 03 — Integração com Inteligência Artificial.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela Google Gemini e valida os itens no PHP. Mantive o exemplo do dashboard estático e ilustrativo. A prévia não salva pedidos nem altera estoque; autenticação continua fora do escopo.
+**Nesta versão, implementei as Etapas 01 a 04 — Validação e Confirmação de Pedidos.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela Google Gemini; o usuário revisa os itens e confirma uma prévia temporária na sessão PHP. Mantive o exemplo do dashboard estático e ilustrativo. A confirmação não cria pedidos nem altera estoque; autenticação continua fora do escopo.
 
 Registrei as decisões, o fluxo, os arquivos alterados, os testes e um roteiro para minha revisão técnica em **[Etapa 03 — documentação técnica](docs/ETAPA-03.md)**.
+
+A implementação atual está descrita em **[Etapa 04 — fluxo, arquivos e roteiro de testes](docs/ETAPA-04.md)**.
 
 ## Tecnologias e requisitos
 
@@ -300,7 +302,34 @@ Cada chamada real pode consumir créditos. Os limites locais reduzem o uso acide
 
 O reconhecimento pode falhar com apelidos, abreviações, erros de digitação e descrições ambíguas. Minha conferência de nomes é conservadora: normaliza caixa, alguns acentos, plurais simples e cores comuns, mas não é uma busca semântica. A IA ainda pode extrair informações incorretamente. Preservo o prazo como texto, sem prometer uma data de entrega.
 
-**A prévia precisa de conferência humana.** Não implementei criação ou gravação de pedidos, baixa de estoque nem confirmação nesta etapa. O estoque pode mudar depois da consulta; em uma etapa futura, será necessário revalidá-lo no momento de salvar, dentro da regra transacional adequada.
+**A prévia precisa de conferência humana.** A Etapa 04 acrescenta edição e confirmação temporária, sem criação ou gravação definitiva de pedidos e sem baixa de estoque. O estoque pode mudar depois da consulta; a futura Etapa 05 deverá revalidá-lo ao salvar, dentro da regra transacional adequada.
+
+## Validação e confirmação — Etapa 04
+
+No **Assistente IA**, interprete uma mensagem ou use **Adicionar produto**. Revise cada linha: troque o produto no modal com pesquisa e paginação, selecione a variação, altere a quantidade ou remova o item. Preço, estoque, subtotal, unidades e total são apresentados automaticamente. Observações e prazo são editáveis; “sexta-feira” permanece texto e não representa garantia de entrega.
+
+**Revalidar prévia** consulta o catálogo atual. **Confirmar dados** executa novamente as validações e mostra: “Dados confirmados com sucesso. O pedido está pronto para ser salvo.” O pedido ainda não foi registrado definitivamente.
+
+- Aceita de 1 a 100 itens, com quantidades inteiras entre 1 e 10.000; zero, negativos, decimais e IDs inválidos são rejeitados.
+- Produtos precisam existir e estar ativos; a variação deve pertencer ao produto. Produtos com variações exigem uma seleção.
+- Linhas duplicadas são mantidas separadas, mas seu estoque é conferido pela soma de todas as quantidades da mesma variação ou produto sem variações.
+- Preços vêm exclusivamente do MySQL. O PHP calcula em centavos inteiros de 64 bits; o JavaScript usa `BigInt` para preservar até os maiores totais permitidos. Valores enviados pelo navegador são ignorados.
+- Observações aceitam até 2.000 caracteres e prazo até 200. Erros aparecem junto às linhas ou campos; falhas preservam as edições na tela.
+- `GET /api/orders/catalog` oferece busca paginada de produtos ativos. `POST /api/orders/validate` recebe `action` (`validate`, `confirm` ou `invalidate`), `revision`, `items`, `notes` e `requested_deadline`. Todas as ações POST exigem `X-CSRF-Token` e JSON, limitado a 64 KiB. Nenhuma edição manual chama a IA.
+
+A sessão guarda `confirmed_order_preview` com IDs, quantidades, preços/subtotais consultados, totais, observações, prazo e instante da confirmação. `requires_revalidation: true` sinaliza que esses valores não são permanentemente válidos. A prévia confirmada reaparece ao recarregar o Assistente enquanto a sessão existir; rascunhos ainda não confirmados ficam apenas no navegador. Editar após confirmar remove a confirmação da interface e envia sua invalidação ao servidor. Revisões da sessão impedem que requisições antigas de outra aba substituam uma confirmação recente; nesse caso, reabra a página.
+
+Para testar sem chamadas reais à IA:
+
+```powershell
+C:\xampp\php\php.exe .tools/composer.phar test
+C:\xampp\php\php.exe tests/orders_mysql.php
+C:\xampp\php\php.exe tests/orders_mysql.php --browser
+```
+
+O primeiro comando inclui `tests/orders.php` (sem banco/rede). O segundo usa um banco MySQL aleatório e isolado. `--browser` inicia e encerra um servidor PHP de teste, usa Playwright e Edge headless e executa tanto a regressão da Etapa 03 quanto o fluxo HTTP/interface da Etapa 04. Exige Node.js, Playwright disponível em `.qa/node_modules` ou no projeto e permissão para criar/remover bancos. Não modifica `.env` nem o catálogo de desenvolvimento. O [roteiro da Etapa 04](docs/ETAPA-04.md) detalha os 18 cenários solicitados e os comandos alternativos.
+
+Limitações: não há reserva de estoque, persistência de pedidos, autenticação ou garantia de entrega. A sessão pode expirar. Uma falha de rede pode impedir a invalidação de chegar ao servidor; reconecte e revalide antes de confiar no estado recuperado. A Etapa 05 permanece fora do escopo e deverá revalidar produtos, preços e estoque antes de qualquer gravação.
 
 ## Limitações e próximas etapas
 
@@ -313,7 +342,7 @@ O reconhecimento pode falhar com apelidos, abreviações, erros de digitação e
 - IDs de variações existentes são preservados. A exclusão física ocorre em transação: futuras tabelas de pedidos devem usar FKs com `ON DELETE RESTRICT` para produtos e variações. A aplicação já trata o bloqueio com uma mensagem amigável e rollback completo; não há tabelas de pedidos nesta etapa.
 - Sem clientes, pedidos, financeiro, uploads ou relatórios. A integração externa desta versão se limita à Google Gemini; o dashboard não mostra métricas reais.
 - Erros internos retornam mensagem genérica. Logs ficam em `storage/logs/php.log`; erros da aplicação não registram credenciais nem mensagens brutas de conexão.
-- Próximas etapas, somente mediante solicitação: **04** fluxo de validação/confirmação; **05** persistência e gestão de pedidos; **06** finalização do portfólio. A validação técnica da prévia já faz parte da Etapa 03.
+- Próximas etapas, somente mediante solicitação: **05** persistência e gestão de pedidos; **06** finalização do portfólio. A Etapa 04 confirma somente uma prévia temporária.
 
 ## Arquivos da Etapa 02
 

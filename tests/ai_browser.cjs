@@ -37,6 +37,8 @@ const assert = require('node:assert/strict');
     const method = await page.request.get(`${base}/api/ai/interpret`);
     check(method.status() === 405, 'GET não interpreta pedidos.');
     let requests = 0;
+    await page.route('**/api/orders/catalog?*', route => route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, products: [{ id: 1, name: '<img src=x onerror=alert(1)>', price: '39.90', stock: 10, variants: [] }], pages: 1, page: 1 }) }));
     const result = {
       success: true, items: [{ product_id: 1, product_name: '<img src=x onerror=alert(1)>', variant: 'Preta / M', quantity: 3,
         unit_price: '39.90', subtotal: '119.70', ready: true, issues: [] },
@@ -55,7 +57,7 @@ const assert = require('node:assert/strict');
     await page.locator('#ai-submit').click();
     check(await page.locator('#ai-submit').isDisabled() && await page.locator('#ai-loading').isVisible(), 'Carregamento e botão desabilitado.');
     await page.locator('#ai-form').evaluate(form => form.dispatchEvent(new Event('submit', { cancelable: true })));
-    await page.locator('#ai-result').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelectorAll('#ai-items tr').length === 2 && document.getElementById('ai-total').textContent === 'R$ 119,70');
     check(requests === 1, 'Clique repetido não duplica requisição.');
     check(await page.locator('#ai-total').innerText() === 'R$ 119,70' && /parcial/.test(await page.locator('#ai-total-label').innerText()), 'Total parcial explícito.');
     check(await page.locator('#ai-items img').count() === 0 && await page.locator('#ai-notes script').count() === 0, 'Resposta renderizada como texto, sem XSS.');
@@ -66,7 +68,7 @@ const assert = require('node:assert/strict');
       check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Sem transbordamento da página em ${width}px.`);
     }
     await page.locator('#ai-message').fill('Outro pedido');
-    check(await page.locator('#ai-result').isHidden(), 'Editar texto invalida resultado anterior.');
+    check(await page.locator('#ai-items tr').count() === 2, 'Editar mensagem preserva a conferência até uma nova interpretação.');
     await page.unroute('**/api/ai/interpret');
     await page.route('**/api/ai/interpret', route => route.fulfill({ status: 503, contentType: 'application/json',
       body: JSON.stringify({ success: false, error: { message: 'IA temporariamente indisponível.' } }) }));

@@ -19,3 +19,6 @@ $router->get('/pedidos', fn () => (new PlaceholderController())->show('pedidos')
 $assistant = new AIController();
 $router->get('/assistente', [$assistant, 'index']);
 $router->post('/api/ai/interpret', [$assistant, 'interpret']);
+$preview = new \App\Controllers\OrderPreviewController();
+$router->get('/api/orders/catalog', [$preview, 'catalog']);
+$router->post('/api/orders/validate', [$preview, 'validate']);
