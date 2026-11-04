@@ -42,7 +42,8 @@ View::configure(dirname(__DIR__) . '/app/Views', ['name' => '<script>alert(1)</s
 $check(url('produtos') === '/produtos', 'URL deve funcionar na raiz.');
 $router = new Router();
 require dirname(__DIR__) . '/routes/web.php';
-foreach (['/', '/produtos/novo', '/pedidos', '/assistente'] as $path) {
+// Pedidos agora depende de MySQL; sua renderização é coberta na integração isolada.
+foreach (['/', '/produtos/novo', '/assistente'] as $path) {
     [$status, $html] = $dispatch($router, 'GET', $path);
     $check($status === 200 && str_contains($html, '<html lang="pt-BR">'), 'Página deve renderizar: ' . $path);
     $check(!str_contains($html, '<script>alert(1)</script>') && str_contains($html, '&lt;script&gt;alert(1)&lt;/script&gt;'), 'Nome configurável deve ser escapado.');

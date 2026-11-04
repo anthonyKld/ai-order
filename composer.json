@@ -18,7 +18,9 @@
     ]
   },
   "scripts": {
-    "test": ["@php tests/run.php", "@php tests/ai.php", "@php tests/orders.php"],
+    "test": ["@php tests/run.php", "@php tests/ai.php", "@php tests/orders.php", "@php tests/order_persistence.php"],
+    "test:orders:mysql": "@php tests/order_persistence_mysql.php",
+    "test:orders:browser": "@php tests/order_persistence_mysql.php --browser",
     "start": "@php -S 127.0.0.1:8000 -t public server.php"
   },
   "config": {

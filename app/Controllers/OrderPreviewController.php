@@ -68,6 +68,7 @@ final class OrderPreviewController
             if ($result['success'] && $input['action'] === 'confirm') {
                 OrderPreviewSession::confirm($_SESSION, $result);
                 $result['confirmed'] = true;
+                $result['idempotency_key'] = $_SESSION['confirmed_order_preview']['idempotency_key'];
                 $result['message'] = 'Dados confirmados com sucesso. O pedido está pronto para ser salvo.';
             }
             $this->respond([...$result, 'revision' => $revision], $result['success'] ? 200 : 422);

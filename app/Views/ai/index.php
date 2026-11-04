@@ -22,7 +22,7 @@
 
 <div id="ai-error" class="alert alert-danger" role="alert" hidden></div>
 <section id="ai-result" class="ai-panel" aria-labelledby="result-title"
-    data-endpoint="<?= e(url('api/orders/validate')) ?>" data-catalog="<?= e(url('api/orders/catalog')) ?>"
+    data-endpoint="<?= e(url('api/orders/validate')) ?>" data-catalog="<?= e(url('api/orders/catalog')) ?>" data-save="<?= e(url('api/orders/save')) ?>"
     data-revision="<?= e(\App\Services\OrderPreviewSession::revision($_SESSION)) ?>"
     data-preview="<?= e(json_encode($_SESSION['confirmed_order_preview'] ?? null, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) ?>">
     <h2 id="result-title" class="h5" tabindex="-1">Confira seu pedido</h2>
@@ -45,7 +45,7 @@
         <div class="col-md-7"><label for="ai-notes" class="form-label">Observações do pedido</label><textarea id="ai-notes" class="form-control" rows="3" maxlength="2000" aria-describedby="notes-error"></textarea><div id="notes-error" class="text-danger small"></div></div>
         <div class="col-md-5"><label for="ai-deadline" class="form-label">Prazo solicitado pelo cliente</label><input id="ai-deadline" class="form-control" maxlength="200" aria-describedby="deadline-help deadline-error"><div id="deadline-help" class="form-text">Preferência do cliente, sem garantia de entrega. Expressões como “sexta-feira” são preservadas.</div><div id="deadline-error" class="text-danger small"></div></div>
     </div>
-    <div class="d-flex flex-wrap gap-2 mt-4"><button type="button" id="review-validate" class="btn btn-outline-primary">Revalidar prévia</button><button type="submit" id="review-confirm" class="btn btn-accent">Confirmar dados</button></div>
+    <div class="d-flex flex-wrap gap-2 mt-4"><button type="button" id="review-validate" class="btn btn-outline-primary">Revalidar prévia</button><button type="submit" id="review-confirm" class="btn btn-accent">Confirmar dados</button><button type="button" id="review-save" class="btn btn-success" hidden>Salvar pedido</button><span id="order-saving" role="status" hidden><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Salvando pedido…</span></div>
     </fieldset>
     </form>
 </section>

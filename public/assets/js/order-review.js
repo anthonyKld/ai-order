@@ -7,6 +7,7 @@
   const modal = new bootstrap.Modal($('product-picker'));
   let items = [], revision = Number(root.dataset.revision), generation = 0;
   let confirmed = false, busy = false, conflict = false, queue = Promise.resolve();
+  let saveKey = null;
   let pickerIndex = null, pickerPage = 1, pickerPages = 1, searchVersion = 0, searchTimer;
   const money = cents => cents === null ? '—' : `R$ ${(BigInt(cents) / 100n).toLocaleString('pt-BR')},${String(BigInt(cents) % 100n).padStart(2, '0')}`;
   const cents = price => BigInt(String(price).replace('.', ''));
@@ -23,6 +24,8 @@
     buttons();
   };
   const buttons = () => {
+    $('review-save').hidden = !confirmed;
+    $('review-save').disabled = busy || conflict || !confirmed || !saveKey;
     $('review-confirm').disabled = busy || conflict || confirmed || !items.length;
     $('review-validate').disabled = busy || conflict;
     $('add-product').disabled = busy || items.length >= 100;
@@ -159,6 +162,7 @@
         }
       });
       confirmed = data.confirmed;
+      saveKey = data.idempotency_key ?? null;
       local();
       $('ai-total').textContent = money(cents(data.estimated_total));
       $('review-units').textContent = data.total_units;
@@ -224,6 +228,31 @@
   $('add-product').addEventListener('click', () => openPicker(null));
   $('review-form').addEventListener('submit', event => { event.preventDefault(); validate('confirm'); });
   $('review-validate').addEventListener('click', () => validate('validate'));
+  $('review-save').addEventListener('click', async () => {
+    if (busy || conflict || !confirmed || !saveKey) return;
+    lock(true); $('order-saving').hidden = false;
+    status('Salvando pedido e atualizando o estoque…');
+    try {
+      await queue;
+      const response = await fetch(root.dataset.save, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': $('ai-form').dataset.token },
+        body: JSON.stringify({ idempotency_key: saveKey }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.preview) {
+          confirmed = false; saveKey = null; revision = data.revision;
+          items.forEach((item, i) => { item.serverErrors = data.preview.validated_items[i]?.errors || {}; });
+          await hydrate(); render();
+        }
+        throw new Error(data.error?.message || 'Não foi possível salvar. Tente novamente.');
+      }
+      status(`Pedido ${data.order_number} salvo com sucesso.`, 'success');
+      window.location.assign(data.redirect);
+    } catch (error) { status(error.message || 'Falha de comunicação. Tente salvar novamente.', 'danger'); }
+    finally { $('order-saving').hidden = true; lock(false); }
+  });
   for (const id of ['ai-notes', 'ai-deadline']) $(id).addEventListener('input', () => { $('notes-error').textContent = ''; $('deadline-error').textContent = ''; changed(); });
   window.addEventListener('order:revision', event => { if (Number.isInteger(event.detail)) revision = event.detail; });
   window.addEventListener('order:busy', event => {
@@ -249,6 +278,7 @@
   if (saved) {
     items = saved.items; $('ai-notes').value = saved.notes ?? ''; $('ai-deadline').value = saved.requested_deadline ?? '';
     confirmed = true;
+    saveKey = saved.idempotency_key ?? null;
     status('Confirmação temporária recuperada. O pedido ainda não foi registrado. Revalide para conferir preços e estoque atuais.', 'success');
     lock(true);
     hydrate().then(render).catch(error => status(error.message, 'danger')).finally(() => lock(false));

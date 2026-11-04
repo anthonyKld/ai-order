@@ -93,9 +93,15 @@ final class Product
                     $this->db->rollBack();
                     return null;
                 }
-                $query = $this->db->prepare('SELECT id FROM product_variants WHERE product_id = ? FOR UPDATE');
+                $query = $this->db->prepare('SELECT id FROM product_variants WHERE product_id = ? ORDER BY id FOR UPDATE');
                 $query->execute([$id]);
                 $existing = array_map('intval', $query->fetchAll(PDO::FETCH_COLUMN));
+                // Uma venda sem variação deve continuar repondo o estoque do produto.
+                if ($existing === [] && $data['variants'] !== [] && $this->db->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'order_items'")->fetchColumn()) {
+                    $linked = $this->db->prepare('SELECT id FROM order_items WHERE product_id = ? LIMIT 1');
+                    $linked->execute([$id]);
+                    if ($linked->fetch()) throw new DomainException('Um produto com histórico de vendas sem variação não pode passar a usar variações. Cadastre outro produto.');
+                }
             }
             foreach ($data['variants'] as $variant) {
                 if ($variant['id'] !== null && !in_array($variant['id'], $existing, true)) {

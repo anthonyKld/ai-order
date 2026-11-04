@@ -2,11 +2,11 @@
 
 Desenvolvi o AI Order como um projeto de portfólio para transformar pedidos em linguagem natural em uma prévia estruturada para conferência. Utilizei PHP com uma arquitetura MVC simplificada, sem framework completo.
 
-**Nesta versão, implementei as Etapas 01 a 04 — Validação e Confirmação de Pedidos.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela Google Gemini; o usuário revisa os itens e confirma uma prévia temporária na sessão PHP. Mantive o exemplo do dashboard estático e ilustrativo. A confirmação não cria pedidos nem altera estoque; autenticação continua fora do escopo.
+**Esta versão implementa as Etapas 01 a 05 — Persistência e Gerenciamento de Pedidos.** O catálogo persiste produtos, preços, estoque e variações no MySQL. O Assistente IA interpreta mensagens pela Google Gemini; o usuário revisa, confirma e salva o pedido. O salvamento registra os valores históricos e baixa o estoque em uma transação. Pedidos podem ser consultados, processados, concluídos ou cancelados conforme as regras abaixo. O exemplo do dashboard permanece estático e ilustrativo; autenticação continua fora do escopo.
 
 Registrei as decisões, o fluxo, os arquivos alterados, os testes e um roteiro para minha revisão técnica em **[Etapa 03 — documentação técnica](docs/ETAPA-03.md)**.
 
-A implementação atual está descrita em **[Etapa 04 — fluxo, arquivos e roteiro de testes](docs/ETAPA-04.md)**.
+A conferência está descrita em **[Etapa 04 — fluxo, arquivos e roteiro de testes](docs/ETAPA-04.md)**. A Etapa 05 está documentada neste README e no **[relatório de testes executados](docs/TESTES_ETAPA_05.md)**.
 
 ## Tecnologias e requisitos
 
@@ -68,7 +68,7 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-4. No phpMyAdmin, selecione esse banco e importe **`database/migrations/002_products.sql`**. A migration usa `CREATE TABLE IF NOT EXISTS`: não apaga nem substitui registros. Ela não corrige automaticamente uma tabela preexistente com estrutura incompatível.
+4. No phpMyAdmin, selecione esse banco e importe **`database/migrations/002_products.sql`**, seguido de **`database/migrations/005_orders.sql`**. As migrations usam `CREATE TABLE IF NOT EXISTS`: não apagam nem substituem registros. Elas não corrigem automaticamente uma tabela preexistente com estrutura incompatível.
 
 Alternativa pelo cliente MySQL no PowerShell:
 
@@ -82,6 +82,7 @@ No console SQL (ajuste banco/caminhos se necessário):
 CREATE DATABASE IF NOT EXISTS ai_order CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE ai_order;
 SOURCE C:/xampp/htdocs/ai-order/database/migrations/002_products.sql;
+SOURCE C:/xampp/htdocs/ai-order/database/migrations/005_orders.sql;
 ```
 
 O arquivo **`database/seeds/products_demo.sql` é opcional e nunca é importado automaticamente**. Ele adiciona Camiseta Básica (R$ 39,90, 33 unidades em três variações), Caneca Personalizada (R$ 24,90, 20 unidades) e Boné Bordado (R$ 49,90, inativo). Cada importação adiciona novos registros; execute apenas quando desejar dados de demonstração.
@@ -226,7 +227,7 @@ O teste `ai_mysql.php` também usa um banco temporário isolado: confere catálo
 Verificação manual:
 
 1. Abra `/` e confirme a apresentação e a marcação de exemplo ilustrativo.
-2. Navegue por Produtos, Pedidos e Assistente IA; confira o destaque do menu e o aviso de “Em breve” somente em Pedidos.
+2. Navegue por Produtos, Pedidos e Assistente IA; confira o destaque do menu e a listagem de pedidos.
 3. Clique em “Conhecer o Assistente IA”, confira o formulário e volte pelo link Dashboard no menu.
 4. Abra `/pagina-inexistente`: deve retornar HTTP 404 com navegação de retorno.
 5. Envie POST para `/`: deve retornar HTTP 405, sem modificar dados.
@@ -302,7 +303,7 @@ Cada chamada real pode consumir créditos. Os limites locais reduzem o uso acide
 
 O reconhecimento pode falhar com apelidos, abreviações, erros de digitação e descrições ambíguas. Minha conferência de nomes é conservadora: normaliza caixa, alguns acentos, plurais simples e cores comuns, mas não é uma busca semântica. A IA ainda pode extrair informações incorretamente. Preservo o prazo como texto, sem prometer uma data de entrega.
 
-**A prévia precisa de conferência humana.** A Etapa 04 acrescenta edição e confirmação temporária, sem criação ou gravação definitiva de pedidos e sem baixa de estoque. O estoque pode mudar depois da consulta; a futura Etapa 05 deverá revalidá-lo ao salvar, dentro da regra transacional adequada.
+**A prévia precisa de conferência humana.** A Etapa 04 acrescenta edição e confirmação temporária, sem baixa de estoque. A Etapa 05 revalida a confirmação ao salvar, dentro da mesma transação que registra o pedido e baixa o estoque.
 
 ## Validação e confirmação — Etapa 04
 
@@ -329,20 +330,89 @@ C:\xampp\php\php.exe tests/orders_mysql.php --browser
 
 O primeiro comando inclui `tests/orders.php` (sem banco/rede). O segundo usa um banco MySQL aleatório e isolado. `--browser` inicia e encerra um servidor PHP de teste, usa Playwright e Edge headless e executa tanto a regressão da Etapa 03 quanto o fluxo HTTP/interface da Etapa 04. Exige Node.js, Playwright disponível em `.qa/node_modules` ou no projeto e permissão para criar/remover bancos. Não modifica `.env` nem o catálogo de desenvolvimento. O [roteiro da Etapa 04](docs/ETAPA-04.md) detalha os 18 cenários solicitados e os comandos alternativos.
 
-Limitações: não há reserva de estoque, persistência de pedidos, autenticação ou garantia de entrega. A sessão pode expirar. Uma falha de rede pode impedir a invalidação de chegar ao servidor; reconecte e revalide antes de confiar no estado recuperado. A Etapa 05 permanece fora do escopo e deverá revalidar produtos, preços e estoque antes de qualquer gravação.
+Limitações da prévia: não há reserva de estoque ou garantia de entrega. A sessão pode expirar. Uma falha de rede pode impedir a invalidação de chegar ao servidor; reconecte e revalide antes de confiar no estado recuperado. A persistência definitiva está disponível pelo botão **Salvar pedido**, descrito a seguir.
+
+## Persistência e gerenciamento — Etapa 05
+
+Depois de **Confirmar dados**, clique em **Salvar pedido**. O botão apresenta carregamento e, após o sucesso, abre os detalhes com o número público do pedido. O menu **Pedidos** oferece pesquisa pelo número, filtro de status, paginação SQL de 10 registros e ordenação por criação/ID decrescentes. Os detalhes exibem nomes, variações, quantidades, preços e subtotais históricos, total, observações, prazo solicitado e eventual cancelamento. Não existe exclusão definitiva de pedidos.
+
+### Instalação das tabelas
+
+Em instalações existentes, aplique somente a migration aditiva `database/migrations/005_orders.sql` no banco indicado por `DB_DATABASE`. Preserve o `.env` e todos os dados existentes. Exemplo para o banco padrão `ai_order`, com o cliente do XAMPP:
+
+```powershell
+C:\xampp\mysql\bin\mysql.exe -u root -p ai_order --execute="SOURCE C:/xampp/htdocs/ai-order/database/migrations/005_orders.sql"
+```
+
+Informe a senha quando solicitada; ajuste usuário e banco conforme seu ambiente. Também é possível importar o SQL pelo phpMyAdmin. Em uma instalação nova, aplique `002_products.sql` antes de `005_orders.sql`. Nenhuma seed é necessária. A migration não é executada automaticamente durante requisições HTTP.
+
+| Tabela | Estrutura |
+|---|---|
+| `orders` | `id` INT UNSIGNED; número público VARCHAR(48) UNIQUE; chave de idempotência CHAR(64) UNIQUE com comparação binária; status; total DECIMAL(16,2); unidades; observações TEXT; prazo VARCHAR(200); criação, atualização e cancelamento DATETIME |
+| `order_items` | `id`, `order_id`, `product_id`, `variant_id` opcional; nomes do produto/variação no momento da venda; quantidade; preço unitário DECIMAL(10,2); subtotal DECIMAL(16,2) |
+
+As duas tabelas usam InnoDB/utf8mb4. FKs com `ON DELETE RESTRICT` protegem pedidos, produtos e variações vinculados. Há índices de status/data/ID, criação/ID e referências dos itens; `CHECK` valida status, quantidades e valores. DECIMAL(16,2) comporta o total máximo permitido pela prévia (100 linhas de 10.000 unidades), calculado em centavos inteiros sem float. A associação entre produto e variação também é revalidada no servidor sob bloqueio.
+
+### Salvamento, estoque e idempotência
+
+1. A confirmação gera 32 bytes aleatórios no servidor (`idempotency_key`, hexadecimal) e guarda IDs, quantidades, nomes, preços e metadados na sessão. Editar a prévia revoga a confirmação; reconfirmar gera outra chave.
+2. `POST /api/orders/save` exige CSRF e JSON de até 4 KiB. Recebe a chave; itens, totais e preços enviados pelo cliente são ignorados. A chave precisa pertencer à confirmação ou a um salvamento já realizado na sessão.
+3. Uma transação reserva a chave UNIQUE, bloqueia produtos em ordem crescente e suas variações em ordem crescente com `SELECT ... FOR UPDATE`, e reutiliza `ReviewedOrderValidator` sobre o catálogo bloqueado.
+4. Preço, nome de produto ou nome de variação alterados exigem nova confirmação: a transação sofre rollback, a confirmação antiga é revogada e a interface atualiza a prévia. Produto inativo, variação inválida ou estoque insuficiente também impedem a gravação. Uma mudança de estoque que ainda comporte a compra não muda os valores comerciais confirmados.
+5. Os itens recebem snapshots de nomes e preços. Subtotais/total são recalculados no servidor. Quantidades de linhas repetidas são somadas para a baixa. Sem variações, atualiza `products.stock`; com variações, atualiza `product_variants.stock`, mantendo o estoque próprio do produto em zero. Updates condicionais impedem estoque negativo.
+6. Pedido, itens e baixa são confirmados juntos. Qualquer falha antes do commit desfaz tudo. Após sucesso, a prévia é invalidada e a sessão guarda a chave do recibo para permitir reenvios. A restrição UNIQUE protege também processos simultâneos; a mesma chave retorna o pedido existente, sem outra baixa.
+
+O número público usa `AO-`, data UTC de emissão e 16 bytes aleatórios, com restrição UNIQUE. O identificador interno é independente. As datas DATETIME usam o relógio do servidor SQL; mantenha o fuso da instância alinhado ao fuso operacional do aplicativo.
+
+### Status e cancelamento
+
+| Estado atual | Próximos estados permitidos |
+|---|---|
+| `pending` — Pendente | `processing`, `cancelled` |
+| `processing` — Em processamento | `completed`, `cancelled` |
+| `completed` — Concluído | Nenhum |
+| `cancelled` — Cancelado | Nenhum |
+
+As ações usam `POST /pedidos/status`, CSRF e validação no servidor. Repetir o estado atual é uma operação idempotente, sem nova movimentação. O modal pede confirmação antes de cancelar. A transação bloqueia o pedido, verifica a transição, bloqueia o catálogo na mesma ordem do salvamento, repõe os itens nas fontes originais e registra `cancelled_at`. Reenvios e cancelamentos simultâneos não duplicam a reposição. Falhas revertem tanto a reposição quanto o status; se a reposição exceder o limite do estoque, o cancelamento é recusado integralmente.
+
+Produtos e variações com histórico não podem ser excluídos; é possível inativar o produto. Um produto vendido sem variações não pode passar a usar variações, para preservar a fonte de estoque em cancelamentos. Nomes e preços podem ser editados sem modificar os snapshots históricos. Itens de pedidos permanecem imutáveis nesta versão.
+
+### Executar os testes
+
+A estrutura simples de asserções PHP existente foi reutilizada, sem adicionar PHPUnit ou dependências à aplicação. O runner de integração da Etapa 05 usa configuração **separada** em `.env.test`; não lê `.env` e não aceita banco de desenvolvimento como destino. Cria `ai_order_test_<12 hex>` e remove esse banco em `finally`, inclusive após falha. A conta de teste precisa de CREATE/DROP DATABASE e TRIGGER, além do acesso às transações InnoDB para verificar concorrência.
+
+```powershell
+# Copie apenas se ainda não existir e ajuste as credenciais de teste.
+Copy-Item .env.test.example .env.test
+C:\xampp\php\php.exe .tools/composer.phar test
+C:\xampp\php\php.exe tests/order_persistence_mysql.php
+C:\xampp\php\php.exe tests/order_persistence_mysql.php --browser
+# Regressão das etapas anteriores:
+C:\xampp\php\php.exe tests/products_mysql.php
+C:\xampp\php\php.exe tests/ai_mysql.php
+C:\xampp\php\php.exe tests/orders_mysql.php --browser
+```
+
+Alternativas com Composer no PATH: `composer test`, `composer test:orders:mysql` e `composer test:orders:browser`. Para testar outra instância MySQL, configure `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USERNAME` e `TEST_DB_PASSWORD` em `.env.test`. Os runners legados continuam usando as credenciais de `.env` para criar seus próprios bancos descartáveis; nunca executam os cenários no banco de desenvolvimento.
+
+O teste de concorrência inicia dois processos PHP com conexões PDO independentes, observa ambos em `LOCK WAIT` e libera a barreira transacional. Verifica estoque 5 versus duas compras de 4, duplicidade simultânea e cancelamento simultâneo. Triggers descartáveis injetam falhas na criação, no segundo item, na baixa e na reposição para verificar rollback integral.
+
+O navegador é opcional para o runner, mas foi executado nesta entrega. Exige Node.js, Playwright e Microsoft Edge. Caso Playwright ainda não esteja disponível: `npm install --prefix .qa --no-save playwright@1.64.1`. A aplicação não passa a depender de Node. O runner inicia e encerra um servidor PHP em porta livre; a IA é simulada, sem consumo de créditos. Capturas ficam em `.qa/orders-stage05-mobile.png` e `.qa/orders-stage05-desktop.png`. Consulte [resultados e limitações reais](docs/TESTES_ETAPA_05.md).
+
+**Antes de publicar em produção, implemente controle de acesso para catálogo, pedidos e IA.** CSRF e chaves de sessão não substituem autenticação/autorização. A sessão precisa continuar disponível para reenviar uma chave; depois de expirar, consulte o histórico. Não há reserva de estoque durante a conferência, pagamentos, clientes, financeiro, WhatsApp, notificações ou emissão fiscal. A Etapa 06 permanece fora do escopo.
 
 ## Limitações e próximas etapas
 
-- Sem autenticação: o catálogo é para desenvolvimento local; qualquer visitante com acesso pode gerenciá-lo.
+- Sem autenticação: catálogo e pedidos são para desenvolvimento local; qualquer visitante com acesso pode gerenciá-los.
 - O roteador usa caminhos estáticos, sem parâmetros dinâmicos ou middleware.
 - Até 100 variações por produto, nome de produto com 150 caracteres, variação com 100, descrição com 5.000. Preço máximo de R$ 99.999.999,99 e estoque total máximo de 2.147.483.647.
 - Preços são strings decimais no PHP e DECIMAL no banco; não passam por float. Nomes de produtos podem repetir; nomes de variações no mesmo produto não.
 - JavaScript é necessário para adicionar/remover linhas e abrir a confirmação; a segurança e a validação são feitas no servidor. Cookies de sessão devem estar habilitados.
 - Pesquisa por trecho usa `LIKE` e não full-text; adequada ao MVP. Edições simultâneas usam transações e lock do produto, mas a última gravação válida prevalece.
-- IDs de variações existentes são preservados. A exclusão física ocorre em transação: futuras tabelas de pedidos devem usar FKs com `ON DELETE RESTRICT` para produtos e variações. A aplicação já trata o bloqueio com uma mensagem amigável e rollback completo; não há tabelas de pedidos nesta etapa.
-- Sem clientes, pedidos, financeiro, uploads ou relatórios. A integração externa desta versão se limita à Google Gemini; o dashboard não mostra métricas reais.
+- IDs de variações existentes são preservados. A exclusão física do catálogo ocorre em transação e as FKs dos pedidos usam `ON DELETE RESTRICT`. A aplicação trata o bloqueio com uma mensagem amigável e rollback completo.
+- Sem clientes, financeiro, uploads ou relatórios avançados. A integração externa desta versão se limita à Google Gemini; o dashboard não mostra métricas reais.
 - Erros internos retornam mensagem genérica. Logs ficam em `storage/logs/php.log`; erros da aplicação não registram credenciais nem mensagens brutas de conexão.
-- Próximas etapas, somente mediante solicitação: **05** persistência e gestão de pedidos; **06** finalização do portfólio. A Etapa 04 confirma somente uma prévia temporária.
+- Próxima etapa, somente mediante solicitação: **06** finalização do portfólio. A Etapa 04 confirma a prévia temporária; a Etapa 05 realiza o salvamento definitivo.
 
 ## Arquivos da Etapa 02
 
